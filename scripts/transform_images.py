@@ -7,7 +7,7 @@ if __name__ == '__main__':
     # change data_root for different datasets.
     # First, we can use os.listdir() to get every image name.
     data_root = "../datasets"
-    image_names = os.listdir(os.path.join(data_root, "train")) # return JPEG image names.
+    image_names = os.listdir(os.path.join(data_root, "train"))  # return JPEG image names.
     # os.listdir() return a list, which includes the name of folder or file in a appointed foldr.
     # Do not include "." and "..".
 
@@ -24,6 +24,6 @@ if __name__ == '__main__':
                 image_file = os.path.join(data_root, filename, image_name[:-4] + "_mask.gif")
                 image = Image.open(image_file).convert("L")
                 if not os.path.exists(os.path.join("../datasets/CarvanaImages", filename)):
-                    os.makedirs(os.path.join("../datasets/CarvanaImages", filename)
-                image.save(os.path.join("../datasets/CarvanaImages", filename, 
-                    image_name[:-4] + "_mask.jpg"))
+                    os.makedirs(os.path.join("../datasets/CarvanaImages", filename))
+                    image.save(os.path.join("../datasets/CarvanaImages", filename,
+                                            image_name[:-4] + "_mask.jpg"))

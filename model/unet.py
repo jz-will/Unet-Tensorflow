@@ -8,16 +8,18 @@ import logging
 import time
 from datetime import datetime
 import tensorflow as tf
-from models import Unet
-from utils import save_images
+from .models import Unet
+from .utils import save_images
 
 import sys
+
 sys.path.append("../data")
 from data import read_tfrecords
 # load test image
 import numpy as np
 import cv2
 import glob
+
 
 class UNet(object):
     def __init__(self, sess, tf_flags):
@@ -27,7 +29,7 @@ class UNet(object):
         self.output_dir = tf_flags.output_dir
         self.checkpoint_dir = os.path.join(self.output_dir, "checkpoint")
         self.checkpoint_prefix = "model"
-        self.saver_name = "checkpoint"
+        self.sa7ver_name = "checkpoint"
         self.summary_dir = os.path.join(self.output_dir, "summary")
 
         self.is_training = (tf_flags.phase == "train")
@@ -35,13 +37,13 @@ class UNet(object):
 
         # data parameters
         self.image_w = 512
-        self.image_h = 512 # The raw and mask image is 1918 * 1280.
-        self.image_c = 1 # Gray image.
+        self.image_h = 512  # The raw and mask image is 1918 * 1280.
+        self.image_c = 1  # Gray image.
 
-        self.input_data = tf.placeholder(self.dtype, [None, self.image_h, self.image_w, 
-            self.image_c])
-        self.input_masks = tf.placeholder(self.dtype, [None, 324, 324, 
-            self.image_c])
+        self.input_data = tf.placeholder(self.dtype, [None, self.image_h, self.image_w,
+                                                      self.image_c])
+        self.input_masks = tf.placeholder(self.dtype, [None, 324, 324,
+                                                       self.image_c])
         # TODO: The shape of image masks. Refer to the Unet in model.py, the output image is
         # 324 * 324 * 1. But is not good.
         # learning rate
@@ -81,21 +83,20 @@ class UNet(object):
         # Use Tensorflow and Keras at the same time.
         self.loss = tf.reduce_mean(tf.keras.losses.binary_crossentropy(
             self.input_masks, self.output))
-        
+
         # optimizer
         self.opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(
             self.loss, name="opt")
-        
+
         # summary
         tf.summary.scalar('loss', self.loss)
-        
+
         self.summary = tf.summary.merge_all()
         # summary and checkpoint
         self.writer = tf.summary.FileWriter(
             self.summary_dir, graph=self.sess.graph)
         self.saver = tf.train.Saver(max_to_keep=10, name=self.saver_name)
         self.summary_proto = tf.Summary()
-
 
     def train(self, batch_size, training_steps, summary_steps, checkpoint_steps, save_steps):
         step_num = 0
@@ -107,18 +108,18 @@ class UNet(object):
             step_num = int(os.path.basename(latest_checkpoint).split("-")[1])
             assert step_num > 0, "Please ensure checkpoint format is model-*.*."
             self.saver.restore(self.sess, latest_checkpoint)
-            logging.info("{}: Resume training from step {}. Loaded checkpoint {}".format(datetime.now(), 
-                step_num, latest_checkpoint))
+            logging.info("{}: Resume training from step {}. Loaded checkpoint {}".format(datetime.now(),
+                                                                                         step_num, latest_checkpoint))
         else:
-            self.sess.run(tf.global_variables_initializer()) # init all variables
+            self.sess.run(tf.global_variables_initializer())  # init all variables
             logging.info("{}: Init new training".format(datetime.now()))
 
         # Utilize TFRecord file to load data. change the tfrecords name for different datasets.
         # define class Read_TFRecords object.
-        tf_reader = read_tfrecords.Read_TFRecords(filename=os.path.join(self.training_set, 
-            "Carvana.tfrecords"),
-            batch_size=batch_size, image_h=self.image_h, image_w=self.image_w, 
-            image_c=self.image_c)
+        tf_reader = read_tfrecords.Read_TFRecords(filename=os.path.join(self.training_set,
+                                                                        "Carvana.tfrecords"),
+                                                  batch_size=batch_size, image_h=self.image_h, image_w=self.image_w,
+                                                  image_c=self.image_c)
 
         images, images_masks = tf_reader.read()
 
@@ -131,11 +132,11 @@ class UNet(object):
             # train
             c_time = time.time()
             lrval = self.learning_rate
-            for c_step in xrange(step_num + 1, training_steps + 1):
+            for c_step in range(step_num + 1, training_steps + 1):
                 # learning rate, adjust lr
                 if c_step % 5000 == 0:
                     lrval = self.learning_rate * .5
-                
+
                 batch_images, batch_images_masks = self.sess.run([images, images_masks])
                 c_feed_dict = {
                     # TFRecord
@@ -155,13 +156,13 @@ class UNet(object):
                     logging.info("{}: Iteration_{} ({:.4f}s/iter) {}".format(
                         datetime.now(), c_step, time_periter,
                         self._print_summary(c_summary)))
-                    c_time = time.time() # update time
+                    c_time = time.time()  # update time
 
                 # save checkpoint
                 if c_step % checkpoint_steps == 0:
                     self.saver.save(self.sess,
-                        os.path.join(self.checkpoint_dir, self.checkpoint_prefix),
-                        global_step=c_step)
+                                    os.path.join(self.checkpoint_dir, self.checkpoint_prefix),
+                                    global_step=c_step)
                     logging.info("{}: Iteration_{} Saved checkpoint".format(
                         datetime.now(), c_step))
 
@@ -170,8 +171,8 @@ class UNet(object):
                         [self.input_data, self.output, self.input_masks],
                         feed_dict=c_feed_dict)
                     save_images(None, output_masks, input_masks,
-                        input_path = './{}/input_{:04d}.png'.format(self.sample_dir, c_step),
-                        image_path = './{}/train_{:04d}.png'.format(self.sample_dir, c_step))
+                                input_path='./{}/input_{:04d}.png'.format(self.sample_dir, c_step),
+                                image_path='./{}/train_{:04d}.png'.format(self.sample_dir, c_step))
         except KeyboardInterrupt:
             print('Interrupted')
             self.coord.request_stop()
@@ -188,7 +189,7 @@ class UNet(object):
         # network.
         output = Unet(name="UNet", in_data=self.input_data, reuse=False)
 
-        self.saver = tf.train.Saver(max_to_keep=10, name=self.saver_name) 
+        self.saver = tf.train.Saver(max_to_keep=10, name=self.saver_name)
         # define saver, after the network!
 
         return output
@@ -214,10 +215,11 @@ class UNet(object):
     def test(self):
         # Test only in a image.
         image_name = glob.glob(os.path.join(self.testing_set, "*.jpg"))
-        
+
         # In tensorflow, test image must divide 255.0.
-        image = np.reshape(cv2.resize(cv2.imread(image_name[0], 0), 
-            (self.image_h, self.image_w)), (1, self.image_h, self.image_w, self.image_c)) / 255.
+        image = np.reshape(cv2.resize(cv2.imread(image_name[0], 0),
+                                      (self.image_h, self.image_w)),
+                           (1, self.image_h, self.image_w, self.image_c)) / 255.
         # OpenCV load image. the data format is BGR, w.t., (H, W, C). The default load is channel=3.
 
         print("{}: Done init data generators".format(datetime.now()))
